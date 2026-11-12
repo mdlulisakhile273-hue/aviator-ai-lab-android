@@ -3,129 +3,171 @@ package com.djymahewu.aviatorailab
 import android.app.Activity
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import java.util.Locale
-import kotlin.math.sqrt
+import kotlin.random.Random
 
 class MainActivity : Activity() {
-    private val samples = mutableListOf<Double>()
-    private lateinit var input: EditText
-    private lateinit var results: TextView
+    private var totalTosses = 0
+    private var heads = 0
+    private var tails = 0
+    private lateinit var resultView: TextView
+    private lateinit var historyView: TextView
+    private lateinit var assistantView: TextView
+
+    private val bg = Color.rgb(10, 9, 24)
+    private val panel = Color.rgb(26, 23, 48)
+    private val purple = Color.rgb(164, 112, 255)
+    private val cyan = Color.rgb(65, 220, 235)
+    private val muted = Color.rgb(180, 177, 200)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.rgb(12, 10, 25)
-        window.navigationBarColor = Color.rgb(12, 10, 25)
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
 
         val scroll = ScrollView(this)
-        val content = LinearLayout(this).apply {
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 28, 24, 24)
-            setBackgroundColor(Color.rgb(12, 10, 25))
+            setPadding(20, 24, 20, 28)
+            setBackgroundColor(bg)
         }
-        scroll.addView(content)
+        scroll.addView(root)
 
-        content.addView(label("AVIATOR AI LAB", 28, Color.WHITE, true))
-        content.addView(label("Probability & statistics learning companion", 14, Color.LTGRAY))
-        content.addView(label(
-            "Educational tool only. It does not predict future game results, connect to betting sites, or recommend bets.",
-            14, Color.rgb(255, 190, 120)
+        root.addView(text("DJY MAHEWU PRESENTS", 11, cyan, true))
+        root.addView(text("AVIATOR AI LAB", 29, Color.WHITE, true))
+        root.addView(text("EXPERIMENT • LEARN • UNDERSTAND", 11, muted, true))
+        root.addView(space(16))
+
+        val intro = card()
+        intro.addView(text("WELCOME TO THE LAB", 15, cyan, true))
+        intro.addView(text(
+            "Explore probability, randomness and statistics through simple experiments. This is a learning simulator, not a game predictor.",
+            14, Color.WHITE
         ))
+        root.addView(intro)
 
-        input = EditText(this).apply {
-            hint = "Enter a sample value, e.g. 2.45"
-            setHintTextColor(Color.GRAY)
-            setTextColor(Color.WHITE)
-            setSingleLine(true)
-            setPadding(14, 12, 14, 12)
-            setBackgroundColor(Color.rgb(35, 29, 55))
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
-                android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
-        content.addView(input, marginParams())
-        content.addView(actionButton("Add sample") { addSample() })
-        content.addView(actionButton("Analyse samples") { analyse() })
-        content.addView(actionButton("Clear samples") {
-            samples.clear()
-            results.text = "No samples yet. Add values to learn about averages and variation."
+        root.addView(sectionTitle("01  •  SIMULATION LAB"))
+        val sim = card()
+        sim.addView(text("COIN TOSS EXPERIMENT", 16, Color.WHITE, true))
+        sim.addView(text("A fair coin has a theoretical 50% chance of landing on heads and 50% on tails.", 13, muted))
+        sim.addView(actionButton("Run 10 tosses", purple) { runExperiment(10) })
+        sim.addView(actionButton("Run 100 tosses", purple) { runExperiment(100) })
+        sim.addView(actionButton("Run 1,000 tosses", purple) { runExperiment(1000) })
+        sim.addView(actionButton("Reset experiment", Color.rgb(75, 68, 100)) { resetExperiment() })
+        resultView = text("Your experiment results will appear here.", 14, Color.WHITE)
+        sim.addView(resultView)
+        root.addView(sim)
+
+        root.addView(sectionTitle("02  •  HISTORY LAB"))
+        val history = card()
+        history.addView(text("SESSION SUMMARY", 16, Color.WHITE, true))
+        historyView = text("No experiments recorded in this session yet.", 14, muted)
+        history.addView(historyView)
+        root.addView(history)
+
+        root.addView(sectionTitle("03  •  AI LEARNING DESK"))
+        val ai = card()
+        ai.addView(text("WHY DOES RANDOMNESS LOOK UNEVEN?", 16, cyan, true))
+        assistantView = text(
+            "Even when outcomes are equally likely, short experiments can produce uneven results. With more trials, the observed proportions often move closer to the theoretical probability, but they are not guaranteed to match exactly.",
+            14, Color.WHITE
+        )
+        ai.addView(assistantView)
+        ai.addView(actionButton("Explain independent events", cyan) {
+            assistantView.text = "Independent events do not change one another's probabilities. For example, in a fair coin experiment, the result of one toss does not change the 50% chance of heads on the next toss. A streak does not make the opposite result 'due'."
         })
+        ai.addView(actionButton("Explain sample size", cyan) {
+            assistantView.text = "A small sample can vary noticeably from the theoretical probability. Larger samples often show a more stable proportion, but random variation never disappears completely and no exact future result is guaranteed."
+        })
+        root.addView(ai)
 
-        results = label("No samples yet. Add values to learn about averages and variation.", 16, Color.WHITE)
-        content.addView(results)
-        content.addView(label(
-            "Past observations do not determine the next random outcome. Statistics describe a sample; they are not a forecast.",
-            14, Color.LTGRAY
+        root.addView(sectionTitle("ABOUT THIS BUILD"))
+        val about = card()
+        about.addView(text("AVIATOR AI LAB  •  VERSION 2.0", 13, Color.WHITE, true))
+        about.addView(text(
+            "Offline educational prototype. No live-game connection, outcome forecasts, betting signals or betting recommendations. Experiments use locally generated random coin tosses.",
+            12, muted
         ))
+        root.addView(about)
+
         setContentView(scroll)
     }
 
-    private fun label(text: String, size: Int, color: Int, bold: Boolean = false) =
+    private fun text(value: String, size: Int, color: Int, bold: Boolean = false) =
         TextView(this).apply {
-            this.text = text
+            text = value
             textSize = size.toFloat()
             setTextColor(color)
-            gravity = Gravity.START
-            if (bold) setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 10, 0, 10)
+            setPadding(0, 7, 0, 7)
+            if (bold) setTypeface(typeface, Typeface.BOLD)
         }
 
-    private fun marginParams() = LinearLayout.LayoutParams(-1, -2).apply {
-        topMargin = 12
-        bottomMargin = 8
+    private fun card() = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(16, 14, 16, 14)
+        background = GradientDrawable().apply {
+            setColor(panel)
+            cornerRadius = 22f
+            setStroke(1, Color.rgb(58, 49, 88))
+        }
+        layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+            bottomMargin = 12
+        }
     }
 
-    private fun actionButton(text: String, action: () -> Unit) =
+    private fun sectionTitle(value: String) = text(value, 13, purple, true).apply {
+        setPadding(2, 16, 2, 8)
+    }
+
+    private fun space(height: Int) = TextView(this).apply {
+        this.height = height
+    }
+
+    private fun actionButton(value: String, color: Int, action: () -> Unit) =
         Button(this).apply {
-            this.text = text
+            text = value
+            setTextColor(Color.WHITE)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+            isAllCaps = false
+            textSize = 14f
             setOnClickListener { action() }
-            layoutParams = marginParams()
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = 5
+                bottomMargin = 5
+            }
         }
 
-    private fun addSample() {
-        val value = input.text.toString().trim().toDoubleOrNull()
-        if (value == null || value <= 0.0 || value > 100000.0) {
-            input.error = "Enter a positive number"
-            return
+    private fun runExperiment(count: Int) {
+        repeat(count) {
+            if (Random.nextBoolean()) heads++ else tails++
         }
-        samples.add(value)
-        input.text.clear()
-        results.text = "Added ${fmt(value)}. Samples recorded: ${samples.size}"
+        totalTosses += count
+        val headRate = heads * 100.0 / totalTosses
+        val tailRate = tails * 100.0 / totalTosses
+        resultView.text = String.format(
+            Locale.US,
+            "LATEST RUN: %d tosses\nSESSION TOTAL: %d\nHeads: %d (%.1f%%)\nTails: %d (%.1f%%)\n\nTheoretical probability: 50%% each. Your observed results can differ because of random variation.",
+            count, totalTosses, heads, headRate, tails, tailRate
+        )
+        historyView.text = String.format(
+            Locale.US,
+            "Experiments completed: %d\nTotal simulated tosses: %d\nHeads: %d\nTails: %d",
+            if (totalTosses == 0) 0 else 1, totalTosses, heads, tails
+        )
     }
 
-    private fun analyse() {
-        if (samples.isEmpty()) {
-            results.text = "Add at least one sample first."
-            return
-        }
-        val sorted = samples.sorted()
-        val mean = samples.average()
-        val median = if (sorted.size % 2 == 1) sorted[sorted.size / 2]
-            else (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2.0
-        val variance = samples.map { (it - mean) * (it - mean) }.average()
-        val below2 = samples.count { it < 2.0 }
-        val from2to5 = samples.count { it >= 2.0 && it < 5.0 }
-        val fivePlus = samples.count { it >= 5.0 }
-        results.text = """
-            SAMPLE SUMMARY
-            Count: ${samples.size}
-            Average: ${fmt(mean)}
-            Median: ${fmt(median)}
-            Minimum: ${fmt(sorted.first())}
-            Maximum: ${fmt(sorted.last())}
-            Standard deviation: ${fmt(sqrt(variance))}
-
-            GROUPS
-            Below 2: ${percent(below2)}
-            2 to below 5: ${percent(from2to5)}
-            5 and above: ${percent(fivePlus)}
-        """.trimIndent()
+    private fun resetExperiment() {
+        totalTosses = 0
+        heads = 0
+        tails = 0
+        resultView.text = "Experiment reset. Choose a number of tosses to begin again."
+        historyView.text = "No experiments recorded in this session yet."
     }
-
-    private fun percent(count: Int) = "${fmt(count * 100.0 / samples.size)}% ($count)"
-    private fun fmt(value: Double) = String.format(Locale.US, "%.2f", value)
 }
